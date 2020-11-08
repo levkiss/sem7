@@ -62,6 +62,23 @@ class linearization:
         #self.w_k = lambda u: self.g1(self.u_old) + self.gradient_g1(self.u_old).scalar_mult(u - self.u_old)
 
     def run_count(self):
+
+        '''
+	    Общий алгоритм действий: 
+        Записываем функцию f(x) в следующем виде:
+	        f(x) ~ f(x_k) + <grad f(x_k), x - x_k> --> min  
+
+        Из этого можно сделать следующий вывод. 
+        Функция стремится к минимуму когда данное скалярное произведение минимально  
+		    <grad f(x_k), x> --> min
+        
+        Для ограничений записываем следующее:
+	        g_i(x) ~ g_i(x_k) + <grad g_i(x_k), x - x_k> <= 0  
+        Можем записать следующее нестрогое неравенство  
+			<grad g_i(x_k), x> <= <grad g_i(x_k), x_k> - g_i(x_k)
+	    Таким образом мы получили задачу линейного программирования, решение котрой представлено ниже
+	    '''
+
         # find u1
         iter = 0
         print('The count is starting')
@@ -126,7 +143,7 @@ class linearization:
             elif a == '5':
                 self.run_count()
             elif a == '6':
-                print('J(u) = x1^2+ x2^2 --> min')
+                print('J(u) = (x-1)**2+ (y+1)**2 --> min')
             elif a == '7':
                 exit()
             else:
