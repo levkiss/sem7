@@ -2,7 +2,8 @@ import logging
 from math import sqrt
 import numpy as np
 from scipy.optimize import linprog
-
+#import scipy.optimize as optimize
+from scipy.optimize import minimize
 
 class Vector2D:
     def __init__(self, x=0, y=0):
@@ -44,22 +45,48 @@ class Vector2D:
 
 
 class linearization:
-    def __init__(self, x=5.0, y=5.0):
-        self.u_old = np.array([x, y])
-
+    def __init__(self, x0=[5.0, 5.0, 5.0, 5.0, 5.0]):
+        self.u_old = np.array(x0)
+        self.u_k = self.u_old
         self.BETTA = 0.000001
         self.eps = 0.00001
 
         # заданные начальные ограничения типа неравенство
-        g1 = lambda u: -u[1] - 1
-        g2 = lambda u: u[0] + 1
+        #g1 = lambda u: -u[1] - 1
+        #g2 = lambda u: u[0] + 1
 
-        self.restrictions = [g1, g2]
+        #self.restrictions = [g1, g2]
 
         # целевая функция x1^2+ x2^2 --> min
-        self.f = lambda x: (x[0] - 1)**2 + (x[1] + 1)**2
+        #self.f = lambda x: (x[0] - 1)**2 + (x[1] + 1)**2
 
         #self.w_k = lambda u: self.g1(self.u_old) + self.gradient_g1(self.u_old).scalar_mult(u - self.u_old)
+    def f(self, x):
+        sum_1 = 0
+        for i in range(1, 5):
+            sum_1 += (x[i] - (i+1) * x[0]) ** 4
+        sum_1 *= 150
+        return sum_1 + (x[0]-1)**2
+
+    def phi_k(self, u):
+        first_num = 0
+        sec_num = 0
+        u_sub = u - self.u_k
+        for i in range(5):
+            first_num += u_sub[i]*2
+        first_num = first_num*0.5
+        gradi = self.gradient(self.f, self.u_k)
+        for i in range(5):
+            sec_num = sec_num + gradi[i]*u_sub[i]
+        sec_num *= self.BETTA
+        return first_num + sec_num
+
+
+    def g1(self, x):
+        sum_1 = 0
+        for i in range(5):
+            sum_1 += ((i+1) * x[i])**2
+        return sum_1 - 224
 
     def run_count(self):
 
@@ -84,27 +111,39 @@ class linearization:
         print('The count is starting')
         # grad = self.gradient(self.f, self.u_old)
         #print('W_k_0 = ', self.w_k(self.u_old))
-        u_k = self.u_old
+        self.u_k = self.u_old
 
         self.u_old = self.u_old + 10
         print("Номер итерации - точка - значение функции")
-        print(0, u_k, self.f(u_k))
-        alpha = 10
-        while (abs(self.f(u_k) - self.f(self.u_old)) > self.eps) and iter < 50:
-            grad = self.gradient(self.f, u_k)
+        print(0, self.u_k, self.f(self.u_k))
+        alpha = 100
+        while (abs(self.f(self.u_k) - self.f(self.u_old)) > self.eps) and iter < 50:
+            '''
+            grad = self.gradient(self.f, self.u_k)
             #print('grad = ', grad)
-            gradients_resrt = np.array([self.gradient(g, u_k) for g in self.restrictions])
-            delta = (gradients_resrt * u_k).sum(axis=1) - np.array([g(u_k) for g in self.restrictions])
+            gradients_resrt = np.array([self.gradient(self.g1, u_k)])
+            delta = (gradients_resrt * u_k).sum(axis=1) - np.array([self.g1(u_k)])
             #print('a = ', A_ub, ' b = ', B_ub)
             bounds = np.c_[u_k - alpha, u_k + alpha]
             #print('bounds = ', bounds)
             self.u_old = u_k
+            #res = optimize.minimize(grad, gradients_resrt, delta, bounds=bounds, method="simplex")
+            #res = optimize.minimize(grad, (2, 0), method='TNC', tol=1e-10)
             res = linprog(grad, gradients_resrt, delta, bounds=bounds, method="simplex")
-            u_k = res.x
+            #res = minimize(self.phi_k, u_k, method='powell', args=(u_k),
+            #               options={'xtol': 1e-8, 'disp': True})
+            '''
+            #self.u_old = self.u_k
+            res = minimize(self.phi_k, self.u_old, method='nelder-mead',
+                           options={'xtol': 1e-8, 'disp': True})
+            self.u_old = self.u_k
+            self.u_k = res.x
             alpha = alpha/2
+
             iter += 1
-            print(iter, "%.4f" % u_k[0], "%.4f" % u_k[1], "%.4f" % self.f(u_k))
-        print('The answer gives function value about', self.f(u_k))
+            iter_print = ["%.2f" % self.u_k[i] for i in range(5)]
+            print(iter, iter_print, "%.4f" % self.f(self.u_k))
+        print('The answer gives function value about', self.f(self.u_k))
 
     def gradient(self, f, u):
         #f_grad = np.array([0.0, 0.0])
@@ -222,6 +261,6 @@ if __name__ == '__main__':
     li = linearization()
     # first = Vector2D(-1, 1)
     # print(li.gradient(first))
-    li.run_method()
+    li.run_count()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
